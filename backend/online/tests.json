@@ -1,0 +1,19 @@
+{
+  "tests": [
+    {
+      "name": "Get online users count",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Update user online status",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "sessionId": "test-session-123"
+      },
+      "expectedStatus": 200
+    }
+  ]
+}

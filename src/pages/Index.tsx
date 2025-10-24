@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -46,14 +46,44 @@ interface User {
 }
 
 export default function Index() {
+  const [sessionId] = useState(() => {
+    const stored = localStorage.getItem('tsound-session-id');
+    if (stored) return stored;
+    const newId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('tsound-session-id', newId);
+    return newId;
+  });
+  
   const currentUser: User = { id: 'user1', name: 'Вы', avatar: '' };
   
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const [tracks, setTracks] = useState<Track[]>(() => {
+    const demoTrack: Track = {
+      id: 'demo-1',
+      title: 'Космическое путешествие',
+      artist: 'TSound Demo',
+      file: new File([], 'demo.mp3'),
+      url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      coverUrl: 'https://picsum.photos/seed/music1/400/400',
+      likes: 42,
+      likedBy: [],
+      comments: [
+        {
+          id: '1',
+          userId: 'demo',
+          userName: 'Демо пользователь',
+          text: 'Отличный трек! 🎵',
+          timestamp: new Date()
+        }
+      ],
+      playlistIds: []
+    };
+    return [demoTrack];
+  });
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [onlineUsers, setOnlineUsers] = useState(1200);
+  const [onlineUsers, setOnlineUsers] = useState(0);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadArtist, setUploadArtist] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -69,6 +99,26 @@ export default function Index() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const updateOnlineStatus = async () => {
+      try {
+        const response = await fetch('https://functions.poehali.dev/d8d2d06b-14bb-4b55-bad0-96c32a5a0d04', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId })
+        });
+        const data = await response.json();
+        setOnlineUsers(data.onlineUsers);
+      } catch (error) {
+        console.error('Failed to update online status:', error);
+      }
+    };
+
+    updateOnlineStatus();
+    const interval = setInterval(updateOnlineStatus, 30000);
+    return () => clearInterval(interval);
+  }, [sessionId]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -211,6 +261,16 @@ export default function Index() {
     toast.success('Плейлист обновлён');
   };
 
+  const handleDownloadTrack = (track: Track) => {
+    const link = document.createElement('a');
+    link.href = track.url;
+    link.download = `${track.artist} - ${track.title}.mp3`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Скачивание началось');
+  };
+
   const filteredTracks = tracks.filter(track =>
     track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     track.artist.toLowerCase().includes(searchQuery.toLowerCase())
@@ -276,6 +336,15 @@ export default function Index() {
                 >
                   <Icon name="MessageCircle" size={18} className="mr-1" />
                   {track.comments.length}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDownloadTrack(track)}
+                  className="text-muted-foreground"
+                >
+                  <Icon name="Download" size={18} className="mr-1" />
+                  Скачать
                 </Button>
               </div>
 
