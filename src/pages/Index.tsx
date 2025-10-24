@@ -148,19 +148,28 @@ export default function Index() {
   }, [sessionId]);
 
   useEffect(() => {
-    const trackData = tracks.map(track => ({
-      id: track.id,
-      title: track.title,
-      artist: track.artist,
-      url: track.url,
-      coverUrl: track.coverUrl,
-      likes: track.likes,
-      likedBy: track.likedBy,
-      comments: track.comments,
-      playlistIds: track.playlistIds
-    }));
-    localStorage.setItem('tsound-tracks', JSON.stringify(trackData));
-  }, [tracks]);
+    const loadTracks = async () => {
+      try {
+        const response = await fetch('https://functions.poehali.dev/4b3869db-febe-43c6-ba73-1064b85c0148', {
+          headers: { 'X-User-Session': sessionId }
+        });
+        const data = await response.json();
+        if (data.tracks) {
+          const loadedTracks = data.tracks.map((track: any) => ({
+            ...track,
+            file: new File([], track.title + '.mp3')
+          }));
+          setTracks(loadedTracks);
+        }
+      } catch (error) {
+        console.error('Failed to load tracks:', error);
+      }
+    };
+    
+    loadTracks();
+    const interval = setInterval(loadTracks, 10000);
+    return () => clearInterval(interval);
+  }, [sessionId]);
 
   useEffect(() => {
     localStorage.setItem('tsound-playlists', JSON.stringify(playlists));
@@ -202,33 +211,58 @@ export default function Index() {
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile || !uploadTitle.trim()) {
       toast.error('Заполните название трека');
       return;
     }
 
-    const newTrack: Track = {
-      id: Date.now().toString(),
-      title: uploadTitle,
-      artist: uploadArtist || currentUser.name,
-      file: selectedFile,
-      url: URL.createObjectURL(selectedFile),
-      coverUrl: coverPreview || undefined,
-      likes: 0,
-      likedBy: [],
-      comments: [],
-      playlistIds: [],
-    };
+    const trackId = Date.now().toString();
+    const audioUrl = URL.createObjectURL(selectedFile);
+    
+    try {
+      const response = await fetch('https://functions.poehali.dev/4b3869db-febe-43c6-ba73-1064b85c0148', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Session': sessionId
+        },
+        body: JSON.stringify({
+          id: trackId,
+          title: uploadTitle,
+          artist: uploadArtist || currentUser.name,
+          audioUrl: audioUrl,
+          coverUrl: coverPreview || undefined
+        })
+      });
+      
+      if (response.ok) {
+        const newTrack: Track = {
+          id: trackId,
+          title: uploadTitle,
+          artist: uploadArtist || currentUser.name,
+          file: selectedFile,
+          url: audioUrl,
+          coverUrl: coverPreview || undefined,
+          likes: 0,
+          likedBy: [],
+          comments: [],
+          playlistIds: [],
+        };
 
-    setTracks([newTrack, ...tracks]);
-    toast.success('Трек загружен!');
-    setUploadTitle('');
-    setUploadArtist('');
-    setSelectedFile(null);
-    setSelectedCover(null);
-    setCoverPreview('');
-    setIsDialogOpen(false);
+        setTracks([newTrack, ...tracks]);
+        toast.success('Трек загружен и доступен всем!');
+        setUploadTitle('');
+        setUploadArtist('');
+        setSelectedFile(null);
+        setSelectedCover(null);
+        setCoverPreview('');
+        setIsDialogOpen(false);
+      }
+    } catch (error) {
+      toast.error('Ошибка загрузки трека');
+      console.error(error);
+    }
   };
 
   const handlePlayTrack = (track: Track) => {
@@ -249,45 +283,80 @@ export default function Index() {
     }
   };
 
-  const handleLike = (trackId: string) => {
-    setTracks(tracks.map(track => {
-      if (track.id === trackId) {
-        const isLiked = track.likedBy.includes(currentUser.id);
-        return {
-          ...track,
-          likes: isLiked ? track.likes - 1 : track.likes + 1,
-          likedBy: isLiked 
-            ? track.likedBy.filter(id => id !== currentUser.id)
-            : [...track.likedBy, currentUser.id]
-        };
-      }
-      return track;
-    }));
+  const handleLike = async (trackId: string) => {
+    try {
+      await fetch('https://functions.poehali.dev/4b3869db-febe-43c6-ba73-1064b85c0148', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Session': sessionId
+        },
+        body: JSON.stringify({
+          trackId: trackId,
+          action: 'like'
+        })
+      });
+      
+      setTracks(tracks.map(track => {
+        if (track.id === trackId) {
+          const isLiked = track.likedBy.includes(sessionId);
+          return {
+            ...track,
+            likes: isLiked ? track.likes - 1 : track.likes + 1,
+            likedBy: isLiked 
+              ? track.likedBy.filter(id => id !== sessionId)
+              : [...track.likedBy, sessionId]
+          };
+        }
+        return track;
+      }));
+    } catch (error) {
+      console.error('Failed to like track:', error);
+    }
   };
 
-  const handleComment = (trackId: string) => {
+  const handleComment = async (trackId: string) => {
     if (!commentText.trim()) return;
 
     const newComment: Comment = {
       id: Date.now().toString(),
-      userId: currentUser.id,
+      userId: sessionId,
       userName: currentUser.name,
       text: commentText,
       timestamp: new Date(),
     };
 
-    setTracks(tracks.map(track => {
-      if (track.id === trackId) {
-        return {
-          ...track,
-          comments: [...track.comments, newComment]
-        };
-      }
-      return track;
-    }));
+    try {
+      await fetch('https://functions.poehali.dev/4b3869db-febe-43c6-ba73-1064b85c0148', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Session': sessionId
+        },
+        body: JSON.stringify({
+          trackId: trackId,
+          action: 'comment',
+          commentId: newComment.id,
+          text: commentText,
+          userName: currentUser.name
+        })
+      });
+      
+      setTracks(tracks.map(track => {
+        if (track.id === trackId) {
+          return {
+            ...track,
+            comments: [...track.comments, newComment]
+          };
+        }
+        return track;
+      }));
 
-    setCommentText('');
-    toast.success('Комментарий добавлен');
+      setCommentText('');
+      toast.success('Комментарий добавлен');
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+    }
   };
 
   const handleCreatePlaylist = () => {
@@ -353,7 +422,7 @@ export default function Index() {
   };
 
   const renderTrackCard = (track: Track) => {
-    const isLiked = track.likedBy.includes(currentUser.id);
+    const isLiked = track.likedBy.includes(sessionId);
     
     return (
       <Card key={track.id} id={`track-${track.id}`} className="bg-card border-border hover:bg-card/80 transition-all">
