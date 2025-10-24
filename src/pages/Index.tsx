@@ -57,6 +57,23 @@ export default function Index() {
   const currentUser: User = { id: 'user1', name: 'Вы', avatar: '' };
   
   const [tracks, setTracks] = useState<Track[]>(() => {
+    const storedTracks = localStorage.getItem('tsound-tracks');
+    if (storedTracks) {
+      try {
+        const parsed = JSON.parse(storedTracks);
+        return parsed.map((track: any) => ({
+          ...track,
+          file: new File([], track.title + '.mp3'),
+          comments: track.comments.map((c: any) => ({
+            ...c,
+            timestamp: new Date(c.timestamp)
+          }))
+        }));
+      } catch (e) {
+        console.error('Failed to load tracks:', e);
+      }
+    }
+    
     const demoTrack: Track = {
       id: 'demo-1',
       title: 'Космическое путешествие',
@@ -79,7 +96,17 @@ export default function Index() {
     };
     return [demoTrack];
   });
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>(() => {
+    const storedPlaylists = localStorage.getItem('tsound-playlists');
+    if (storedPlaylists) {
+      try {
+        return JSON.parse(storedPlaylists);
+      } catch (e) {
+        console.error('Failed to load playlists:', e);
+      }
+    }
+    return [];
+  });
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,6 +146,25 @@ export default function Index() {
     const interval = setInterval(updateOnlineStatus, 30000);
     return () => clearInterval(interval);
   }, [sessionId]);
+
+  useEffect(() => {
+    const trackData = tracks.map(track => ({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      url: track.url,
+      coverUrl: track.coverUrl,
+      likes: track.likes,
+      likedBy: track.likedBy,
+      comments: track.comments,
+      playlistIds: track.playlistIds
+    }));
+    localStorage.setItem('tsound-tracks', JSON.stringify(trackData));
+  }, [tracks]);
+
+  useEffect(() => {
+    localStorage.setItem('tsound-playlists', JSON.stringify(playlists));
+  }, [playlists]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
