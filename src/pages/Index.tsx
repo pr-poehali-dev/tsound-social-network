@@ -120,6 +120,23 @@ export default function Index() {
     return () => clearInterval(interval);
   }, [sessionId]);
 
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedTrackId = urlParams.get('track');
+    
+    if (sharedTrackId) {
+      const sharedTrack = tracks.find(t => t.id === sharedTrackId);
+      if (sharedTrack) {
+        setCurrentTrack(sharedTrack);
+        toast.success(`Открыт трек: ${sharedTrack.title}`);
+        setTimeout(() => {
+          const trackElement = document.getElementById(`track-${sharedTrackId}`);
+          trackElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 500);
+      }
+    }
+  }, [tracks]);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('audio/')) {
@@ -271,6 +288,12 @@ export default function Index() {
     toast.success('Скачивание началось');
   };
 
+  const handleShareTrack = (track: Track) => {
+    const shareUrl = `${window.location.origin}?track=${track.id}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('Ссылка скопирована в буфер обмена!');
+  };
+
   const filteredTracks = tracks.filter(track =>
     track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     track.artist.toLowerCase().includes(searchQuery.toLowerCase())
@@ -287,7 +310,7 @@ export default function Index() {
     const isLiked = track.likedBy.includes(currentUser.id);
     
     return (
-      <Card key={track.id} className="bg-card border-border hover:bg-card/80 transition-all">
+      <Card key={track.id} id={`track-${track.id}`} className="bg-card border-border hover:bg-card/80 transition-all">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
             <div className="relative shrink-0">
@@ -345,6 +368,15 @@ export default function Index() {
                 >
                   <Icon name="Download" size={18} className="mr-1" />
                   Скачать
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleShareTrack(track)}
+                  className="text-muted-foreground"
+                >
+                  <Icon name="Share2" size={18} className="mr-1" />
+                  Поделиться
                 </Button>
               </div>
 
