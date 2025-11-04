@@ -1,0 +1,39 @@
+{
+  "tests": [
+    {
+      "name": "Get online users",
+      "method": "GET",
+      "path": "/?action=online",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Create chat",
+      "method": "POST",
+      "path": "/?action=chat",
+      "body": {
+        "user1_id": "1",
+        "user2_id": "2"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "id": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Send message",
+      "method": "POST",
+      "path": "/?action=send",
+      "body": {
+        "chat_id": "chat_1_2",
+        "sender_id": "1",
+        "content": "Hello!"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "content": "Hello!"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
