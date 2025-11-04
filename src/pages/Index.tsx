@@ -211,33 +211,40 @@ export default function Index() {
         <div className="p-4">
           <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
             <Icon name="Users" size={16} />
-            Онлайн ({onlineUsers.length})
+            Онлайн ({onlineUsers.filter(u => u.session_id !== sessionId).length})
           </h3>
         </div>
 
         <ScrollArea className="flex-1">
           <div className="space-y-1 px-2">
-            {onlineUsers.map((user) => (
-              <button
-                key={user.id}
-                onClick={() => handleSelectUser(user)}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors ${
-                  selectedUser?.id === user.id ? 'bg-muted' : ''
-                }`}
-              >
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.avatar_url} />
-                  <AvatarFallback>{user.username?.[0] || 'U'}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 text-left">
-                  <p className="font-medium text-sm">{user.username}</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    онлайн
-                  </p>
-                </div>
-              </button>
-            ))}
+            {onlineUsers
+              .filter((user) => user.session_id !== sessionId)
+              .map((user) => (
+                <button
+                  key={user.id}
+                  onClick={() => handleSelectUser(user)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors ${
+                    selectedUser?.id === user.id ? 'bg-muted' : ''
+                  }`}
+                >
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={user.avatar_url} />
+                    <AvatarFallback>{user.username?.[0] || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left">
+                    <p className="font-medium text-sm">{user.username}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      онлайн
+                    </p>
+                  </div>
+                  {user.session_id === 'bot_assistant' && (
+                    <div className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full font-medium">
+                      Бот
+                    </div>
+                  )}
+                </button>
+              ))}
           </div>
         </ScrollArea>
       </div>
