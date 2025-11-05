@@ -5,14 +5,13 @@
       "method": "POST",
       "body": {
         "action": "register",
-        "username": "testuser",
-        "email": "test@example.com",
+        "username": "testuser2",
         "password": "testpass123"
       },
       "expectedStatus": 200,
       "expectedBody": {
         "sessionId": "string",
-        "username": "testuser"
+        "username": "testuser2"
       },
       "bodyMatcher": "partial"
     },

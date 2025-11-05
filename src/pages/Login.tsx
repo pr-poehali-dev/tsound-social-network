@@ -20,7 +20,6 @@ export default function Login() {
 
   const [registerData, setRegisterData] = useState({
     username: '',
-    email: '',
     password: '',
     confirmPassword: ''
   });
@@ -85,7 +84,6 @@ export default function Login() {
         body: JSON.stringify({
           action: 'register',
           username: registerData.username,
-          email: registerData.email,
           password: registerData.password
         })
       });
@@ -176,17 +174,7 @@ export default function Login() {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-email">Email</Label>
-                  <Input
-                    id="register-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={registerData.email}
-                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                    required
-                  />
-                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="register-password">Пароль</Label>
                   <Input

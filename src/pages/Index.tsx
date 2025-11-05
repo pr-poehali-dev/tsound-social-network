@@ -59,9 +59,20 @@ export default function Index() {
       return;
     }
     
+    const updateOnlineStatus = async () => {
+      await fetch(`${API_URL}?action=heartbeat&session_id=${sessionId}`);
+    };
+    
+    updateOnlineStatus();
     loadOnlineUsers();
-    const interval = setInterval(loadOnlineUsers, 5000);
-    return () => clearInterval(interval);
+    
+    const statusInterval = setInterval(updateOnlineStatus, 30000);
+    const usersInterval = setInterval(loadOnlineUsers, 5000);
+    
+    return () => {
+      clearInterval(statusInterval);
+      clearInterval(usersInterval);
+    };
   }, [sessionId, navigate]);
 
   useEffect(() => {

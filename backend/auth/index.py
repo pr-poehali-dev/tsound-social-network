@@ -43,7 +43,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         if action == 'register':
             username = body_data.get('username')
-            email = body_data.get('email')
             password = body_data.get('password')
             
             if not username or not password:
@@ -72,10 +71,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             cur.execute(
                 """INSERT INTO t_p95121472_tsound_social_networ.users 
-                   (session_id, username, email, avatar_url, password_hash, status, last_seen) 
-                   VALUES (%s, %s, %s, %s, %s, 'online', NOW()) 
+                   (session_id, username, avatar_url, password_hash, status, last_seen) 
+                   VALUES (%s, %s, %s, %s, 'online', NOW()) 
                    RETURNING id""",
-                (session_id, username, email, avatar_url, password_hash)
+                (session_id, username, avatar_url, password_hash)
             )
             user_id = cur.fetchone()[0]
             conn.commit()
