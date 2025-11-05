@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -36,12 +37,10 @@ interface Chat {
 const API_URL = 'https://functions.poehali.dev/08b27303-4176-4c11-827e-d7c2c0ede910';
 
 export default function Index() {
+  const navigate = useNavigate();
+  
   const [sessionId] = useState(() => {
-    const existing = localStorage.getItem('session_id');
-    if (existing) return existing;
-    const newId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('session_id', newId);
-    return newId;
+    return localStorage.getItem('sessionId') || '';
   });
 
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -55,10 +54,15 @@ export default function Index() {
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
+    if (!sessionId) {
+      navigate('/login');
+      return;
+    }
+    
     loadOnlineUsers();
     const interval = setInterval(loadOnlineUsers, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [sessionId, navigate]);
 
   useEffect(() => {
     if (currentChat) {
@@ -78,6 +82,11 @@ export default function Index() {
       setCurrentUserId(currentUser.id);
       setUsername(currentUser.username || '');
       setAvatarUrl(currentUser.avatar_url || '');
+    } else if (sessionId) {
+      const savedUsername = localStorage.getItem('username');
+      if (savedUsername) {
+        setUsername(savedUsername);
+      }
     }
   };
 
@@ -183,9 +192,22 @@ export default function Index() {
               <p className="text-xs text-muted-foreground">Ti Messenger</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setShowSettings(!showSettings)}>
-            <Icon name="Settings" size={20} />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setShowSettings(!showSettings)}>
+              <Icon name="Settings" size={20} />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                localStorage.removeItem('sessionId');
+                localStorage.removeItem('username');
+                navigate('/login');
+              }}
+            >
+              <Icon name="LogOut" size={20} />
+            </Button>
+          </div>
         </div>
 
         {showSettings && (
@@ -208,8 +230,13 @@ export default function Index() {
           </div>
         )}
 
-        <div className="p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+        <div className="p-4 space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Icon name="MessageSquare" size={16} />
+            Чаты
+          </h3>
+          
+          <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Icon name="Users" size={16} />
             Онлайн ({onlineUsers.filter(u => u.session_id !== sessionId).length})
           </h3>
